@@ -3,6 +3,8 @@
 HELP="
 dogi
 
+A simple way to deploy your pet projects using Docker, Git and Caddy
+
 dogi create  # Create a new application
 dogi deploy  # Deploy an application
 dogi env     # View or edit environment variables for an application
@@ -13,7 +15,7 @@ dogi help    # Show this help message
 HELP_CREATE="
 dogi create
 
-Create a new application
+Creates a new application
 
 Usage:
   dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
@@ -102,6 +104,8 @@ docker image prune -a -f --filter "until=168h"
 echo "### Your app $APP_NAME was deployed successfully."
 '
 
+CADDY_IMAGE="caddy/caddy:2.0.0-beta.20-alpine"
+
 create(){
   [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
 
@@ -112,10 +116,34 @@ create(){
   echo "### Setting up directories and files..."
   mkdir -p /srv/$APP_NAME/git /srv/$APP_NAME/app
   [ ! -f "/srv/$APP_NAME/env" ] && touch /srv/$APP_NAME/env
-  [ ! -f "/srv/$APP_NAME/git/HEAD" ] && git init --bare /srv/$APP_NAME/git
   printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT" > /srv/$APP_NAME/deploy
   chmod +x /srv/$APP_NAME/deploy
-  [ ! -f "/srv/$APP_NAME/git/hooks/post-update" ] && ln -s /srv/$APP_NAME/deploy /srv/$APP_NAME/git/hooks/post-update
+
+  echo "### Setting up git repository..."
+  [ ! -f "/srv/$APP_NAME/git/HEAD" ] && git init --bare /srv/$APP_NAME/git
+  ln -sf /srv/$APP_NAME/deploy /srv/$APP_NAME/git/hooks/post-update
+
+  echo "### Starting Caddy..."
+  if test -z "$(docker ps -qf name=caddy)"; then
+    docker run --name caddy \
+      -d --restart unless-stopped \
+      --net=host --cap-add=cap_net_bind_service \
+      -v /mnt/persistent/caddy/data:/data -v /mnt/persistent/caddy/config:/config \
+      $CADDY_IMAGE caddy run -resume
+  fi
+
+  echo "### Configuring Caddy..."
+  if test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
+    curl -fs http://localhost:2019/config/ \
+      -H "content-type: application/json" \
+      -d '{"apps":{"http":{"servers":{"default":{"listen":[":80",":443"],"routes":[]}}}}}'
+  fi
+
+  if test -z "$(curl -fs http://localhost:2019/id/route-$APP_NAME)"; then
+    curl -fs http://localhost:2019/config/apps/http/servers/default/routes/ \
+      -H "content-type: application/json" \
+      -d "{\"@id\":\"route-$APP_NAME\"}"
+  fi
 
   echo "### Application created successfully."
 }
