@@ -64,11 +64,60 @@ Options:
   -h  # Show this message
 "
 
-create(){
-  [ -z "$APP_NAME" ] || [ -z "$APP_HOST" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+DEPLOY_SCRIPT='#!/bin/sh
 
-  echo "### Creating..."
-  echo "Creating $APP_NAME on $APP_DOMAIN at $APP_PORT"
+set -eu
+
+APP_NAME=%s
+APP_DOMAIN=%s
+APP_PORT=%s
+
+echo "### Checking out the code..."
+cd /srv/$APP_NAME/git
+GIT_WORK_TREE=/srv/$APP_NAME/app git checkout -f
+
+echo "### Building the image..."
+docker build -t $APP_NAME /srv/$APP_NAME/app
+
+echo "### Stopping the old instance..."
+docker stop $APP_NAME 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
+
+echo "### Starting the application..."
+docker run --name $APP_NAME \
+  -d --restart unless-stopped \
+  -p 127.0.0.1:$APP_PORT:$APP_PORT \
+  --add-host=parent:172.17.0.1 \
+  --env-file /srv/$APP_NAME/env \
+  $APP_NAME
+
+echo "### Registering the application on Caddy..."
+curl -fs -XPATCH "http://localhost:2019/id/route-$APP_NAME/" \
+  -H "content-type: application/json" \
+  -d "{\"@id\":\"route-$APP_NAME\",\"match\":[{\"host\":[\"$APP_DOMAIN\"]}],\"handle\":[{\"handler\":\"reverse_proxy\",\"upstreams\":[{\"@id\":\"upstream-$APP_NAME\",\"dial\":\":$APP_PORT\"}]}]}"
+
+echo "### Cleaning up unused containers and images..."
+docker container prune -f --filter "until=168h"
+docker image prune -a -f --filter "until=168h"
+
+echo "### Your app $APP_NAME was deployed successfully."
+'
+
+create(){
+  [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+
+  echo "### Creating application '$APP_NAME' with domain '$APP_DOMAIN' running on port '$APP_PORT'"
+  read -p "### Are you sure? (y/n) " CONFIRM
+  [ "$CONFIRM" != "y" ] && exit 1
+
+  echo "### Setting up directories and files..."
+  mkdir -p /srv/$APP_NAME/git /srv/$APP_NAME/app
+  [ ! -f "/srv/$APP_NAME/env" ] && touch /srv/$APP_NAME/env
+  [ ! -f "/srv/$APP_NAME/git/HEAD" ] && git init --bare /srv/$APP_NAME/git
+  printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT" > /srv/$APP_NAME/deploy
+  chmod +x /srv/$APP_NAME/deploy
+  [ ! -f "/srv/$APP_NAME/git/hooks/post-update" ] && ln -s /srv/$APP_NAME/deploy /srv/$APP_NAME/git/hooks/post-update
+
+  echo "### Application created successfully."
 }
 
 deploy(){
@@ -86,7 +135,7 @@ env(){
 remove(){
   [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
 
-  echo "NOT IMPLEMENTED"
+  echo "### NOT IMPLEMENTED"
 }
 
 ACTION=$1
