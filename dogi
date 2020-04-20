@@ -1,0 +1,123 @@
+#!/bin/sh
+
+HELP="
+dogi
+
+dogi create  # Create a new application
+dogi deploy  # Deploy an application
+dogi env     # View or edit environment variables for an application
+dogi remove  # Remove an existing application
+dogi help    # Show this help message
+"
+
+HELP_CREATE="
+dogi create
+
+Create a new application
+
+Usage:
+  dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
+
+Options:
+  -n  # The application name (REQUIRED)
+  -d  # The domain under which the application will be made available (REQUIRED)
+  -p  # The container port exposed by your application (REQUIRED)
+  -h  # Show this message
+"
+
+HELP_DEPLOY="
+dogi deploy
+
+Deploy an application
+
+Usage:
+  dogi deploy -n [APP NAME]
+
+Options:
+  -n  # The application name (REQUIRED)
+  -h  # Show this message
+"
+
+HELP_ENV="
+dogi env
+
+View or edit environment variables for an application
+
+Usage:
+  dogi env -n [APP NAME]
+
+Options:
+  -n  # The application name (REQUIRED)
+  -h  # Show this message
+"
+
+HELP_REMOVE="
+dogi remove
+
+Remove an existing application
+
+Usage:
+  dogi remove -n [APP NAME]
+
+Options:
+  -n  # The application name (REQUIRED)
+  -h  # Show this message
+"
+
+create(){
+  [ -z "$APP_NAME" ] || [ -z "$APP_HOST" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+
+  echo "### Creating..."
+  echo "Creating $APP_NAME on $APP_DOMAIN at $APP_PORT"
+}
+
+deploy(){
+  [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
+
+  /srv/$APP_NAME/deploy
+}
+
+env(){
+  [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
+
+  edit /srv/$APP_NAME/env
+}
+
+remove(){
+  [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
+
+  echo "NOT IMPLEMENTED"
+}
+
+ACTION=$1
+[ $# -ne 0 ] && shift
+
+while getopts "n:d:p:h" OPTION
+do
+  case $OPTION in
+    n)
+      APP_NAME=$OPTARG
+      ;;
+    d)
+      APP_DOMAIN=$OPTARG
+      ;;
+    p)
+      APP_PORT=$OPTARG
+      ;;
+    h | *)
+      echo "$HELP"; exit 1;;
+  esac
+done
+
+case "$ACTION" in
+  create)
+    create;;
+  deploy)
+    deploy;;
+  env)
+    env;;
+  remove)
+    remove;;
+  help | *)
+    echo "$HELP"; exit 1;;
+esac
