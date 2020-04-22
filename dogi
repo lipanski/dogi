@@ -20,6 +20,9 @@ Creates a new application
 Usage:
   dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
 
+Usege over SSH:
+  ssh -t user@server dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
+
 Options:
   -n  # The application name (REQUIRED)
   -d  # The domain under which the application will be made available (REQUIRED)
@@ -36,6 +39,9 @@ Deploy an application
 Usage:
   dogi deploy -n [APP NAME]
 
+Usage over SSH:
+  ssh -t user@server dogi deploy -n [APP NAME]
+
 Options:
   -n  # The application name (REQUIRED)
   -h  # Show this message
@@ -49,6 +55,9 @@ View or edit environment variables for an application
 Usage:
   dogi env -n [APP NAME]
 
+Usage over SSH:
+  ssh -t user@server dogi env -n [APP NAME]
+
 Options:
   -n  # The application name (REQUIRED)
   -h  # Show this message
@@ -61,6 +70,9 @@ Remove an existing application
 
 Usage:
   dogi remove -n [APP NAME]
+
+Usage over SSH:
+  ssh -t user@server dogi remove -n [APP NAME]
 
 Options:
   -n  # The application name (REQUIRED)
@@ -203,8 +215,7 @@ remove(){
   rm -rf $APPS_DIR/$APP_NAME
 }
 
-ACTION=$1
-[ $# -ne 0 ] && shift
+ACTION=$1 && [ $# -ne 0 ] && shift
 
 while getopts "n:d:p:fh" OPTION
 do
