@@ -24,6 +24,7 @@ Options:
   -n  # The application name (REQUIRED)
   -d  # The domain under which the application will be made available (REQUIRED)
   -p  # The container port exposed by your application (REQUIRED)
+  -f  # Don't prompt for confirmation and use default directories
   -h  # Show this message
 "
 
@@ -108,12 +109,23 @@ echo "### Your app $APP_NAME was deployed successfully."
 CADDY_IMAGE="caddy/caddy:2.0.0-beta.20-alpine"
 APPS_DIR="$HOME/.dogi"
 DEFAULT_CADDY_DIR="$HOME/.caddy"
+FORCE=false
 
 setup(){
+  if ! command -v docker > /dev/null; then
+    echo "### You need to install Docker on the host machine before proceeding."
+    exit 1
+  fi
+
+  if id -nG "$USER" | grep -vqw "docker\|root"; then
+    echo "### The user '$USER' does not belong to the 'docker' group. Run 'sudo usermod -a -G docker $USER' to fix this."
+    exit 1
+  fi
+
   if test -z "$(docker ps -qf name=caddy)"; then
     echo "### Starting Caddy..."
 
-    read -p "### Where should Caddy store data and configuration? ($DEFAULT_CADDY_DIR) " CADDY_DIR
+    [ "$FORCE" = true ] || read -p "### Where should Caddy store data and configuration? ($DEFAULT_CADDY_DIR) " CADDY_DIR
     [ -z "$CADDY_DIR" ] && CADDY_DIR=$DEFAULT_CADDY_DIR
     mkdir -p $CADDY_DIR/data $CADDY_DIR/config
 
@@ -122,9 +134,11 @@ setup(){
       --net=host --cap-add=cap_net_bind_service \
       -v $CADDY_DIR/data:/data -v $CADDY_DIR/config:/config \
       $CADDY_IMAGE caddy run -resume
+
+    sleep 5
   fi
 
-  if test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
+  if test "$(curl -fs http://localhost:2019/config/)" = "null" || test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
     echo "### Setting up default Caddy configuration..."
     curl -fs http://localhost:2019/config/ \
       -H "content-type: application/json" \
@@ -135,29 +149,15 @@ setup(){
 create(){
   [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
 
-  if ! command -v docker > /dev/null; then
-    echo "### You need to install Docker on the host machine before proceeding."
-    exit 1
-  fi
-
-  if id -nG "$USER" | grep -vqw "docker\|root"; then
-    echo "### The user $USER does not belong to the docker group."
-    exit 1
-  fi
-
-  if test -z "$(docker ps -qf name=caddy)"; then
-    echo "### Caddy server not running. Triggering setup..."
-    setup
-  fi
+  setup
 
   echo "### Creating application '$APP_NAME' with domain '$APP_DOMAIN' running on port '$APP_PORT'"
-  read -p "### Are you sure? (y/n) " CONFIRM
-  [ "$CONFIRM" != "y" ] && exit 1
+  [ "$FORCE" = true ] || { read -p "### Are you sure? (y/n) " CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
 
   echo "### Setting up directories and files..."
   mkdir -p $APPS_DIR/$APP_NAME/git $APPS_DIR/$APP_NAME/app
   [ ! -f "$APPS_DIR/$APP_NAME/env" ] && touch $APPS_DIR/$APP_NAME/env
-  printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT", "$APPS_DIR" > $APPS_DIR/$APP_NAME/deploy
+  printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT" "$APPS_DIR" > $APPS_DIR/$APP_NAME/deploy
   chmod +x $APPS_DIR/$APP_NAME/deploy
 
   echo "### Setting up git repository..."
@@ -172,6 +172,7 @@ create(){
   fi
 
   echo "### Application created successfully."
+  echo "### Run 'git remote add dogi $USER@$(echo "$SSH_CONNECTION" | cut -d' ' -f3):$APPS_DIR/$APP_NAME/git' from your local repository."
 }
 
 deploy(){
@@ -195,18 +196,17 @@ remove(){
 ACTION=$1
 [ $# -ne 0 ] && shift
 
-while getopts "n:d:p:h" OPTION
+while getopts "n:d:p:fh" OPTION
 do
   case $OPTION in
     n)
-      APP_NAME=$OPTARG
-      ;;
+      APP_NAME=$OPTARG;;
     d)
-      APP_DOMAIN=$OPTARG
-      ;;
+      APP_DOMAIN=$OPTARG;;
     p)
-      APP_PORT=$OPTARG
-      ;;
+      APP_PORT=$OPTARG;;
+    f)
+      FORCE=true;;
     h | *)
       echo "$HELP"; exit 1;;
   esac
