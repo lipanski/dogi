@@ -190,7 +190,17 @@ env(){
 remove(){
   [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
 
-  echo "### NOT IMPLEMENTED"
+  echo "### This will remove application '$APP_NAME' entirely, including the remote Git repository"
+  [ "$FORCE" = true ] || { read -p "### Are you sure? (y/n) " CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
+
+  echo "### Stopping the old instance..."
+  docker stop $APP_NAME 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
+
+  echo "### Unregistering the application on Caddy..."
+  curl -fs -XDELETE "http://localhost:2019/id/route-$APP_NAME/"
+
+  echo "### Removing directories and files..."
+  rm -rf $APPS_DIR/$APP_NAME
 }
 
 ACTION=$1
