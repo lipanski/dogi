@@ -70,16 +70,17 @@ DEPLOY_SCRIPT='#!/bin/sh
 
 set -eu
 
-APP_NAME=%s
-APP_DOMAIN=%s
-APP_PORT=%s
+APP_NAME="%s"
+APP_DOMAIN="%s"
+APP_PORT="%s"
+APPS_DIR="%s"
 
 echo "### Checking out the code..."
-cd /srv/$APP_NAME/git
-GIT_WORK_TREE=/srv/$APP_NAME/app git checkout -f
+cd $APPS_DIR/$APP_NAME/git
+GIT_WORK_TREE=$APPS_DIR/$APP_NAME/app git checkout -f
 
 echo "### Building the image..."
-docker build -t $APP_NAME /srv/$APP_NAME/app
+docker build -t $APP_NAME $APPS_DIR/$APP_NAME/app
 
 echo "### Stopping the old instance..."
 docker stop $APP_NAME 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
@@ -89,7 +90,7 @@ docker run --name $APP_NAME \
   -d --restart unless-stopped \
   -p 127.0.0.1:$APP_PORT:$APP_PORT \
   --add-host=parent:172.17.0.1 \
-  --env-file /srv/$APP_NAME/env \
+  --env-file $APPS_DIR/$APP_NAME/env \
   $APP_NAME
 
 echo "### Registering the application on Caddy..."
@@ -105,41 +106,66 @@ echo "### Your app $APP_NAME was deployed successfully."
 '
 
 CADDY_IMAGE="caddy/caddy:2.0.0-beta.20-alpine"
+APPS_DIR="$HOME/.dogi"
+DEFAULT_CADDY_DIR="$HOME/.caddy"
+
+setup(){
+  if test -z "$(docker ps -qf name=caddy)"; then
+    echo "### Starting Caddy..."
+
+    read -p "### Where should Caddy store data and configuration? ($DEFAULT_CADDY_DIR) " CADDY_DIR
+    [ -z "$CADDY_DIR" ] && CADDY_DIR=$DEFAULT_CADDY_DIR
+    mkdir -p $CADDY_DIR/data $CADDY_DIR/config
+
+    docker run --name caddy \
+      -d --restart unless-stopped \
+      --net=host --cap-add=cap_net_bind_service \
+      -v $CADDY_DIR/data:/data -v $CADDY_DIR/config:/config \
+      $CADDY_IMAGE caddy run -resume
+  fi
+
+  if test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
+    echo "### Setting up default Caddy configuration..."
+    curl -fs http://localhost:2019/config/ \
+      -H "content-type: application/json" \
+      -d '{"apps":{"http":{"servers":{"default":{"listen":[":80",":443"],"routes":[]}}}}}'
+  fi
+}
 
 create(){
   [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+
+  if ! command -v docker > /dev/null; then
+    echo "### You need to install Docker on the host machine before proceeding."
+    exit 1
+  fi
+
+  if id -nG "$USER" | grep -vqw "docker\|root"; then
+    echo "### The user $USER does not belong to the docker group."
+    exit 1
+  fi
+
+  if test -z "$(docker ps -qf name=caddy)"; then
+    echo "### Caddy server not running. Triggering setup..."
+    setup
+  fi
 
   echo "### Creating application '$APP_NAME' with domain '$APP_DOMAIN' running on port '$APP_PORT'"
   read -p "### Are you sure? (y/n) " CONFIRM
   [ "$CONFIRM" != "y" ] && exit 1
 
   echo "### Setting up directories and files..."
-  mkdir -p /srv/$APP_NAME/git /srv/$APP_NAME/app
-  [ ! -f "/srv/$APP_NAME/env" ] && touch /srv/$APP_NAME/env
-  printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT" > /srv/$APP_NAME/deploy
-  chmod +x /srv/$APP_NAME/deploy
+  mkdir -p $APPS_DIR/$APP_NAME/git $APPS_DIR/$APP_NAME/app
+  [ ! -f "$APPS_DIR/$APP_NAME/env" ] && touch $APPS_DIR/$APP_NAME/env
+  printf "$DEPLOY_SCRIPT" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT", "$APPS_DIR" > $APPS_DIR/$APP_NAME/deploy
+  chmod +x $APPS_DIR/$APP_NAME/deploy
 
   echo "### Setting up git repository..."
-  [ ! -f "/srv/$APP_NAME/git/HEAD" ] && git init --bare /srv/$APP_NAME/git
-  ln -sf /srv/$APP_NAME/deploy /srv/$APP_NAME/git/hooks/post-update
-
-  echo "### Starting Caddy..."
-  if test -z "$(docker ps -qf name=caddy)"; then
-    docker run --name caddy \
-      -d --restart unless-stopped \
-      --net=host --cap-add=cap_net_bind_service \
-      -v /mnt/persistent/caddy/data:/data -v /mnt/persistent/caddy/config:/config \
-      $CADDY_IMAGE caddy run -resume
-  fi
-
-  echo "### Configuring Caddy..."
-  if test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
-    curl -fs http://localhost:2019/config/ \
-      -H "content-type: application/json" \
-      -d '{"apps":{"http":{"servers":{"default":{"listen":[":80",":443"],"routes":[]}}}}}'
-  fi
+  [ ! -f "$APPS_DIR/$APP_NAME/git/HEAD" ] && git init --bare $APPS_DIR/$APP_NAME/git
+  ln -sf $APPS_DIR/$APP_NAME/deploy $APPS_DIR/$APP_NAME/git/hooks/post-update
 
   if test -z "$(curl -fs http://localhost:2019/id/route-$APP_NAME)"; then
+    echo "### Configuring Caddy..."
     curl -fs http://localhost:2019/config/apps/http/servers/default/routes/ \
       -H "content-type: application/json" \
       -d "{\"@id\":\"route-$APP_NAME\"}"
@@ -151,13 +177,13 @@ create(){
 deploy(){
   [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
 
-  /srv/$APP_NAME/deploy
+  $APPS_DIR/$APP_NAME/deploy
 }
 
 env(){
   [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
 
-  edit /srv/$APP_NAME/env
+  edit $APPS_DIR/$APP_NAME/env
 }
 
 remove(){
