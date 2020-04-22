@@ -162,7 +162,7 @@ setup(){
 }
 
 create(){
-  [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
 
   setup
 
@@ -191,19 +191,19 @@ create(){
 }
 
 deploy(){
-  [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
+  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
 
   $APPS_DIR/$APP_NAME/deploy
 }
 
 env(){
-  [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
+  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
 
   edit $APPS_DIR/$APP_NAME/env
 }
 
 remove(){
-  [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
+  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
 
   echo "### This will remove application '$APP_NAME' entirely, including the remote Git repository"
   [ "$FORCE" = true ] || { read -p "### Are you sure? (y/n) " CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
@@ -232,7 +232,7 @@ do
     f)
       FORCE=true;;
     h | *)
-      echo "$HELP"; exit 1;;
+      HELP_REQUESTED=true;;
   esac
 done
 
