@@ -1,5 +1,7 @@
 #!/bin/sh
 
+VERSION="0.1.0"
+
 HELP="
 dogi
 
@@ -9,6 +11,7 @@ dogi create  # Create a new application
 dogi deploy  # Deploy an application
 dogi env     # View or edit environment variables for an application
 dogi remove  # Remove an existing application
+dogi version # Print the version
 dogi help    # Show this help message
 "
 
@@ -242,6 +245,8 @@ case "$ACTION" in
     env;;
   remove)
     remove;;
+  version)
+    echo "$VERSION"; exit 0;;
   help | *)
     echo "$HELP"; exit 1;;
 esac
