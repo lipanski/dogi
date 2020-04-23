@@ -131,6 +131,11 @@ setup(){
     exit 1
   fi
 
+  if ! command -v curl > /dev/null; then
+    echo "### You need to install curl on the host machine before proceeding."
+    exit 1
+  fi
+
   if id -nG "$USER" | grep -vqwE "docker|root"; then
     echo "### The user '$USER' does not belong to the 'docker' group. Run 'sudo usermod -a -G docker $USER' to fix this."
     exit 1
