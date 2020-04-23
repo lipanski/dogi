@@ -121,7 +121,7 @@ echo "### Your app $APP_NAME was deployed successfully."
 '
 
 CADDY_IMAGE="caddy/caddy:2.0.0-beta.20-alpine"
-APPS_DIR="$HOME/.dogi"
+APPS_DIR="$HOME/apps"
 DEFAULT_CADDY_DIR="$HOME/.caddy"
 FORCE=false
 
@@ -161,7 +161,7 @@ setup(){
 }
 
 create(){
-  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+  [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] || [ -z "$APP_DOMAIN" ] || [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
 
   setup
 
@@ -194,19 +194,19 @@ create(){
 }
 
 deploy(){
-  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
+  [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_DEPLOY"; exit 1; }
 
   $APPS_DIR/$APP_NAME/deploy
 }
 
 env(){
-  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
+  [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_ENV"; exit 1; }
 
   edit $APPS_DIR/$APP_NAME/env
 }
 
 remove(){
-  [ $HELP_REQUESTED = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
+  [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
 
   echo "### This will remove application '$APP_NAME' entirely, including the remote Git repository"
   [ "$FORCE" = true ] || { read -p "### Are you sure? (y/n) " CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
@@ -235,7 +235,7 @@ do
       ;;
     p)
       APP_PORT=$OPTARG
-      echo "$APP_PORT" | grep -vqE "^\d+$" && { echo "### The port argument may only numbers"; exit 1; }
+      echo "$APP_PORT" | grep -vqE "^[0-9]+$" && { echo "### The port argument may only contain numbers"; exit 1; }
       ;;
     f)
       FORCE=true;;
