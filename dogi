@@ -23,7 +23,7 @@ Creates a new application
 Usage:
   dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
 
-Usege over SSH:
+Usage over SSH:
   ssh -t user@server dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
 
 Options:
@@ -69,7 +69,7 @@ Options:
 HELP_REMOVE="
 dogi remove
 
-Remove an existing application
+Remove an application
 
 Usage:
   dogi remove -n [APP NAME]
@@ -98,14 +98,13 @@ GIT_WORK_TREE=$APPS_DIR/$APP_NAME/app git checkout -f
 echo "### Building the image..."
 docker build -t $APP_NAME $APPS_DIR/$APP_NAME/app
 
-echo "### Stopping the old instance..."
+echo "### Stopping the previously running instance..."
 docker stop $APP_NAME 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
 
 echo "### Starting the application..."
 docker run --name $APP_NAME \
   -d --restart unless-stopped \
-  -p 127.0.0.1:$APP_PORT:$APP_PORT \
-  --add-host=parent:172.17.0.1 \
+  --net=host \
   --env-file $APPS_DIR/$APP_NAME/env \
   $APP_NAME
 
@@ -187,7 +186,11 @@ create(){
   fi
 
   echo "### Application created successfully."
-  echo "### Run 'git remote add dogi $USER@$(echo "$SSH_CONNECTION" | cut -d' ' -f3):$APPS_DIR/$APP_NAME/git' from your local repository."
+
+  SSH_COMMAND="[SSH USER]@[SSH SERVER]"
+  SSH_SERVER=$(echo "$SSH_CONNECTION" | cut -d' ' -f3)
+  [ ! -z "$SSH_SERVER" ] && SSH_COMMAND="$USER@$SSH_SERVER"
+  echo "### Run 'git remote add dogi $SSH_COMMAND:$APPS_DIR/$APP_NAME/git' to connect your local git repository to dogi."
 }
 
 deploy(){
@@ -208,7 +211,7 @@ remove(){
   echo "### This will remove application '$APP_NAME' entirely, including the remote Git repository"
   [ "$FORCE" = true ] || { read -p "### Are you sure? (y/n) " CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
 
-  echo "### Stopping the old instance..."
+  echo "### Stopping the previously running instance..."
   docker stop $APP_NAME 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
 
   echo "### Unregistering the application on Caddy..."
