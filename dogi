@@ -131,7 +131,7 @@ setup(){
     exit 1
   fi
 
-  if id -nG "$USER" | grep -vqw "docker\|root"; then
+  if id -nG "$USER" | grep -vqwE "docker|root"; then
     echo "### The user '$USER' does not belong to the 'docker' group. Run 'sudo usermod -a -G docker $USER' to fix this."
     exit 1
   fi
@@ -227,11 +227,16 @@ while getopts "n:d:p:fh" OPTION
 do
   case $OPTION in
     n)
-      APP_NAME=$OPTARG;;
+      APP_NAME=$OPTARG
+      echo "$APP_NAME" | grep -vqE "^[a-zA-Z0-9_]+$" && { echo "### The name argument may only contain letters, numbers or underscore"; exit 1; }
+      ;;
     d)
-      APP_DOMAIN=$OPTARG;;
+      APP_DOMAIN=$OPTARG
+      ;;
     p)
-      APP_PORT=$OPTARG;;
+      APP_PORT=$OPTARG
+      echo "$APP_PORT" | grep -vqE "^\d+$" && { echo "### The port argument may only numbers"; exit 1; }
+      ;;
     f)
       FORCE=true;;
     h | *)
