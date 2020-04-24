@@ -5,7 +5,7 @@ VERSION="0.1.0"
 HELP="
 dogi
 
-A simple way to deploy your pet projects using Docker, Git and Caddy
+A simple way to deploy your pet projects using Docker, Git, Caddy and SSH.
 
 dogi create  # Create a new application
 dogi deploy  # Deploy an application
@@ -18,7 +18,7 @@ dogi help    # Show this help message
 HELP_CREATE="
 dogi create
 
-Creates a new application
+Creates a new application.
 
 Usage:
   dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
@@ -38,7 +38,8 @@ Options:
 HELP_DEPLOY="
 dogi deploy
 
-Deploy an application
+Deploys an application without code changes. If there have been code changes since the previous
+release, use the 'git push' deployment method to include them.
 
 Usage:
   dogi deploy -n [APP NAME]
@@ -54,7 +55,7 @@ Options:
 HELP_ENV="
 dogi env
 
-View or edit environment variables for an application
+View or edit environment variables for an application.
 
 Usage:
   dogi env -n [APP NAME]
@@ -70,7 +71,7 @@ Options:
 HELP_REMOVE="
 dogi remove
 
-Remove an application
+Removes an application entirely.
 
 Usage:
   dogi remove -n [APP NAME]
