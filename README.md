@@ -8,7 +8,7 @@ Goals:
 - Use Docker (and only Docker, no build packs or Helm charts) to define and contain your application dependencies.
 - Expose a web server in the most simple way using Caddy.
 - Manage SSL certificates automatically with Caddy and Let's Encrypt.
-- Recover without manual intervention after an outage or a server restart.
+- Recover from outages or server restarts without any manual intervention.
 - Handle all this with a simple, POSIX-compliant and easy to follow Shell script.
 
 Non-goals:
@@ -16,7 +16,7 @@ Non-goals:
 - Handling more than one server at a time.
 - Handling complex use cases.
 - Anything anywhere close to Kubernetes or Docker Swarm.
-- Using Docker to establish network isolation: Dogi uses `--net=host` so use a firewall instead.
+- Using Docker to establish network isolation (see the [Security](#Security) section below).
 
 ## Example
 
@@ -52,9 +52,17 @@ git push dogi master
 
 If the deployment was successful, your website should be available under `https://coins.example.com`.
 
-If you'd like to trigger a deployment without making a Git push, you can call `ssh -t dogi@1.2.3.4 dogi deploy -n coins`.
+If you'd like to trigger a deployment without making a Git push, you can call:
 
-Finally, if you'd like to remove the application entirely, run `ssh -t dogi@1.2.3.4 dogi remove -n coins`.
+```sh
+ssh -t dogi@1.2.3.4 dogi deploy -n coins
+```
+
+Finally, if you'd like to remove the application entirely run:
+
+```sh
+ssh -t dogi@1.2.3.4 dogi remove -n coins
+```
 
 ## Installation
 
