@@ -94,11 +94,11 @@ ssh -t dogi@1.2.3.4 dogi help
 
 ## Usage
 
-Run `dogi help` for the list of all available commands and their options.
+Run `dogi help` for a list of all available commands and options.
 
 ## Development
 
-Run [shellcheck](https://github.com/koalaman/shellcheck) (0.7.1+):
+Run [shellcheck](https://github.com/koalaman/shellcheck) (0.7+):
 
 ```sh
 shellcheck dogi
