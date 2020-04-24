@@ -111,7 +111,7 @@ docker run --name $APP_NAME \
   $DOCKER_OPTS \
   $APP_NAME
 
-if [ ! -z "$APP_DOMAIN" ] && [ ! -z "$APP_PORT" ]; then
+if [ -n "$APP_DOMAIN" ] && [ -n "$APP_PORT" ]; then
   echo "### Registering the application on Caddy..."
   curl -fs -XPATCH "http://localhost:2019/id/route-$APP_NAME/" \
     -H "content-type: application/json" \
@@ -173,8 +173,8 @@ setup(){
 
 create(){
   [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_CREATE"; exit 1; }
-  [ -z "$APP_DOMAIN" ] && [ ! -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
-  [ ! -z "$APP_DOMAIN" ] && [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+  [ -z "$APP_DOMAIN" ] && [ -n "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+  [ -n "$APP_DOMAIN" ] && [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
 
   setup
 
@@ -202,7 +202,7 @@ create(){
 
   SSH_COMMAND="[SSH USER]@[SSH SERVER]"
   SSH_SERVER=$(echo "$SSH_CONNECTION" | cut -d' ' -f3)
-  [ ! -z "$SSH_SERVER" ] && SSH_COMMAND="$USER@$SSH_SERVER"
+  [ -n "$SSH_SERVER" ] && SSH_COMMAND="$USER@$SSH_SERVER"
   echo "### Run 'git remote add dogi $SSH_COMMAND:$APPS_DIR/$APP_NAME/git' to connect your local git repository to dogi."
 }
 
