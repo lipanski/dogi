@@ -5,7 +5,7 @@ Dogi provides a simple way to deploy your pet projects using Docker, Git, Caddy 
 Goals:
 
 - Deploy your application with Git pushes (Heroku-style).
-- Use Docker to define and contain your application dependencies.
+- Use Docker (and only Docker, no build packs or Helm charts) to define and contain your application dependencies.
 - Expose a web server in the most simple way using Caddy.
 - Manage SSL certificates automatically with Caddy and Let's Encrypt.
 - Recover without manual intervention after an outage or a server restart.
@@ -95,6 +95,10 @@ ssh -t dogi@1.2.3.4 dogi help
 ## Usage
 
 Run `dogi help` for a list of all available commands and options.
+
+## Security
+
+Dogi runs containers with `docker run --net=host`. This means all ports exposed by your containers will be available to all other containers and the host. If your apps bind to `0.0.0.0`, these ports will be exposed to the public as well. To prevent this, use a firewall - like `ufw` on Ubuntu or something like [AWS Security Groups](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html) or [DigitalOcean Cloud Firewalls](https://www.digitalocean.com/docs/networking/firewalls/).
 
 ## Development
 
