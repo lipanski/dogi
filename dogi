@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 
 HELP="
 dogi
@@ -10,6 +10,7 @@ A simple way to deploy your pet projects using Docker, Git, Caddy and SSH.
 dogi create  # Create a new application
 dogi deploy  # Deploy an application
 dogi env     # View or edit environment variables for an application
+dogi logs    # Show and follow the logs for an application
 dogi remove  # Remove an existing application
 dogi version # Print the version
 dogi help    # Show this help message
@@ -62,6 +63,22 @@ Usage:
 
 Usage over SSH:
   ssh -t user@server dogi env -n [APP NAME]
+
+Options:
+  -n  # The application name (required)
+  -h  # Show this message
+"
+
+HELP_LOGS="
+dogi logs
+
+Show and follow the logs for an application.
+
+Usage:
+  dogi logs -n [APP NAME]
+
+Usage over SSH:
+  ssh -t user@server dogi logs -n [APP NAME]
 
 Options:
   -n  # The application name (required)
@@ -218,6 +235,12 @@ env(){
   edit "$APPS_DIR/$APP_NAME/env"
 }
 
+logs(){
+  [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_LOGS"; exit 1; }
+
+  docker logs -f "$APP_NAME"
+}
+
 remove(){
   [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_REMOVE"; exit 1; }
 
@@ -254,9 +277,11 @@ do
       DOCKER_OPTS=$OPTARG
       ;;
     f)
-      FORCE=true;;
+      FORCE=true
+      ;;
     h | *)
-      HELP_REQUESTED=true;;
+      HELP_REQUESTED=true
+      ;;
   esac
 done
 
@@ -267,6 +292,8 @@ case "$ACTION" in
     deploy;;
   env)
     env;;
+  logs)
+    logs;;
   remove)
     remove;;
   version)
