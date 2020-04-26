@@ -133,7 +133,7 @@ Here's how to set it up on Ubuntu:
     ssh my-server dogi help
     ```
 
-    > If you intend to use `scp` over such a shortcut, remove the `RequestTTY force` line in favour of explicitly adding `-t` to every Dogi call.
+    > Bear in mind that `scp` doesn't play nicely with `RequestTTY force` so avoid using `scp` over such a shortcut or remove the setting in favour of explicitly adding `-t` to every Dogi SSH call.
 
 ## Usage
 
