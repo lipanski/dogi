@@ -22,7 +22,9 @@ Non-goals:
 
 Let's say you've built a web app to showcase your awesome coin collection. It runs on port 3001 and you've added a Dockerfile. In order to show it to your numismatist friends, you'd like to see it running behind `https://coins.example.com`. Say no more - Dogi is here to help.
 
-Assuming you've [installed Dogi](#Installation), you can connect to your server by calling `ssh dogi@1.2.3.4` and you've pointed your domain's DNS records to your server, let's **create** the app:
+The following instructions assume that you've [installed Dogi](#Installation), you can connect to your server by calling `ssh dogi@1.2.3.4` and you've pointed your domain's DNS records to this machine.
+
+Let's **create** the app:
 
 ```sh
 ssh -t dogi@1.2.3.4 dogi create -n coins -d coins.example.com -p 3001
@@ -48,9 +50,9 @@ git remote add dogi dogi@1.2.3.4:/home/dogi/apps/coins/git
 git push dogi master
 ```
 
-If the deployment was successful, your website should be available under `https://coins.example.com`.
+If the deployment was successful and the domain's DNS records are pointing to your server, your website should be available under `https://coins.example.com`.
 
-If you'd like to trigger a **deployment without making a Git push** (without code changes), you can call:
+If you'd like to trigger a **deployment without making a Git push** (without triggering a code change), you can call:
 
 ```sh
 ssh -t dogi@1.2.3.4 dogi deploy -n coins
@@ -76,62 +78,62 @@ Here's how to set it up on Ubuntu:
 
 1. Install curl:
 
-```sh
-sudo apt install curl
-```
+  ```sh
+  sudo apt install curl
+  ```
 
 2. Install Docker. Please refer to [the official installation guide](https://docs.docker.com/engine/install/ubuntu/) and avoid the default Ubuntu packages or Snap.
 
 3. Install Dogi:
 
-```sh
-curl -s https://raw.githubusercontent.com/lipanski/dogi/master/dogi > /usr/local/bin/dogi
-chmod +x /usr/local/bin/dogi
-```
+  ```sh
+  curl -s https://raw.githubusercontent.com/lipanski/dogi/master/dogi > /usr/local/bin/dogi
+  chmod +x /usr/local/bin/dogi
+  ```
 
-> If you prefer to use a specific version of Dogi, replace the branch name (`master`) in the URL above with a [tagged version](https://github.com/lipanski/dogi/releases).
+  > If you prefer to use a specific version of Dogi, replace the branch name (`master`) in the URL above with a [tagged version](https://github.com/lipanski/dogi/releases).
 
 4. (Optional, but recommended) Create a dedicated user for running Dogi:
 
-```sh
-adduser --disabled-password --shell /bin/bash dogi
-```
+  ```sh
+  adduser --disabled-password --shell /bin/bash dogi
+  ```
 
-> All relevant files will be placed inside `$HOME/apps` so ensure the user has a home directory and it uses the right permissions.
+  > All relevant files will be placed inside `$HOME/apps` so ensure the user has a home directory and it uses the right permissions.
 
 5. Make sure the user running Dogi belongs to the `docker` group:
 
-```sh
-addgroup docker || true
-usermod -aG docker dogi
-``` 	
+  ```sh
+  addgroup docker || true
+  usermod -aG docker dogi
+  ``` 	
 
 6. Set up your public SSH key under `$HOME/.ssh/authorized_keys` so that you can access the server and allow pushes to the Dogi git repositories.
 
 7. Assuming you can reach the server by calling `ssh dogi@1.2.3.4`, let's test the installation:
 
-```sh
-ssh -t dogi@1.2.3.4 dogi help
-```
+  ```sh
+  ssh -t dogi@1.2.3.4 dogi help
+  ```
 
-...which should print the Dogi help message.
+  ...which should print the Dogi help message.
 
 8. (Optional) Simplify the way you access Dogi over SSH by adding a shortcut to your `~/.ssh/config`:
 
-```
-Host my-server
-  HostName 1.2.3.4
-  User dogi
-  RequestTTY force
-```
+  ```
+  Host my-server
+    HostName 1.2.3.4
+    User dogi
+    RequestTTY force
+  ```
 
-Now you can call any Dogi command like this:
+  Now you can call any Dogi command like this:
 
-```sh
-ssh my-server dogi help
-```
+  ```sh
+  ssh my-server dogi help
+  ```
 
-> If you intend to use `scp` over such a shortcut, remove the `RequestTTY force` line in favour of explicitly adding `-t` to every Dogi call.
+  > If you intend to use `scp` over such a shortcut, remove the `RequestTTY force` line in favour of explicitly adding `-t` to every Dogi call.
 
 ## Usage
 
