@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 
 HELP="
 dogi
@@ -12,6 +12,7 @@ dogi deploy  # Deploy an application
 dogi env     # View or edit environment variables for an application
 dogi logs    # Show and follow the logs for an application
 dogi remove  # Remove an existing application
+dogi setup   # Set up dogi (only useful if you're performing a manual upgrade)
 dogi version # Print the version
 dogi help    # Show this help message
 "
@@ -142,7 +143,7 @@ docker image prune -a -f --filter "until=168h"
 echo "### Your app $APP_NAME was deployed successfully."
 '
 
-CADDY_IMAGE="caddy/caddy:2.0.0-alpine"
+CADDY_IMAGE="caddy/caddy:2.1.1-alpine"
 DEFAULT_CADDY_DIR="$HOME/.caddy"
 APPS_DIR="$HOME/apps"
 DOCKER_OPTS="--net=host"
@@ -177,7 +178,8 @@ setup(){
       -v "$CADDY_DIR/data:/data" -v "$CADDY_DIR/config:/config" \
       $CADDY_IMAGE caddy run -resume
 
-    sleep 5
+    # Give caddy some time to resume before we apply the default configuration in the next step
+    sleep 10
   fi
 
   if test "$(curl -fs http://localhost:2019/config/)" = "null" || test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
@@ -286,6 +288,8 @@ do
 done
 
 case "$ACTION" in
+  setup)
+    setup;;
   create)
     create;;
   deploy)
