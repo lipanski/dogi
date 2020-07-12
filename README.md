@@ -79,10 +79,14 @@ Here's how to set it up on Ubuntu:
 1. Install curl:
 
     ```sh
-    sudo apt install curl
+    sudo apt-get install curl
     ```
 
-2. Install Docker. Please refer to [the official installation guide](https://docs.docker.com/engine/install/ubuntu/) and avoid the default Ubuntu packages or Snap.
+2. Install Docker. Please refer to [the official installation guide](https://docs.docker.com/engine/install/ubuntu/) or try your luck with:
+
+    ```sh
+    sudo apt-get install docker.io
+    ```
 
 3. Install Dogi:
 
