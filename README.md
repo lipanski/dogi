@@ -1,26 +1,26 @@
-# Dogi
+Dogi helps you deploy your pet projects using Docker, Git, Caddy and SSH.
 
-Dogi provides a simple way to deploy your pet projects using Docker, Git, Caddy and SSH.
+**Goals:**
 
-Goals:
+- Keep things **simple**.
+- **Deploy** your application **with Git pushes** (Heroku-style).
+- Use **Docker** and **Dockerfiles** to define and contain your application dependencies.
+- Expose and manage a **web server** in the most simple way using **Caddy**.
+- **Manage SSL certificates automatically** with Caddy and Let's Encrypt.
+- **Recover from outages** or server restarts without any manual intervention.
+- Pass commands through **SSH** to manage your applications.
+- Handle all this with a simple, POSIX-compliant and **easy to review Shell script**.
 
-- Deploy your application with Git pushes (Heroku-style).
-- Use Docker (and only Docker, no build packs or Helm charts) to define and contain your application dependencies.
-- Expose a web server in the most simple way using Caddy.
-- Manage SSL certificates automatically with Caddy and Let's Encrypt.
-- Recover from outages or server restarts without any manual intervention.
-- Handle all this with a simple, POSIX-compliant and easy to follow Shell script.
-
-Non-goals:
+**Non-goals:**
 
 - Handling more than one server at a time.
 - Handling complex use cases.
-- Anything anywhere close to Kubernetes or Docker Swarm.
+- Anything anywhere close to Kubernetes, Docker Swarm, build packs or Helm charts.
 - Using Docker to establish network isolation (see the [Security](#Security) section below).
 
 ## Quick start
 
-Let's say you've built a web app to showcase your awesome coin collection. It runs on port 3001 and you've added a Dockerfile. In order to show it to your numismatist friends, you'd like to see it running behind `https://coins.example.com`. Say no more - Dogi is here to help.
+Let's say you've built a web app to showcase your awesome coin collection. It runs on port 3001 and you've added a Dockerfile. You'd like to see it running at `https://coins.example.com`.
 
 The following instructions assume that you've [installed Dogi](#Installation), you can connect to your server by calling `ssh dogi@1.2.3.4` and you've pointed your domain's DNS records to this machine.
 
