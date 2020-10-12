@@ -1,5 +1,7 @@
 Dogi helps you deploy your pet projects using Docker, Git, Caddy and SSH.
 
+Get the code at <https://github.com/lipanski/dogi>.
+
 **Goals:**
 
 - Keep things **simple**.
