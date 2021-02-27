@@ -130,10 +130,11 @@ docker run --name $APP_NAME \
   $APP_NAME
 
 if [ -n "$APP_DOMAIN" ] && [ -n "$APP_PORT" ]; then
-  echo "### Registering the application on Caddy..."
+  APP_DOMAINS=$(echo $APP_DOMAIN | sed "s/\s/\",\"/")
+  echo "### Registering the application on Caddy as \"$APP_DOMAINS\"..."
   curl -fs -XPATCH "http://localhost:2019/id/route-$APP_NAME/" \
     -H "content-type: application/json" \
-    -d "{\"@id\":\"route-$APP_NAME\",\"match\":[{\"host\":[\"$APP_DOMAIN\"]}],\"handle\":[{\"handler\":\"reverse_proxy\",\"upstreams\":[{\"@id\":\"upstream-$APP_NAME\",\"dial\":\":$APP_PORT\"}]}]}"
+    -d "{\"@id\":\"route-$APP_NAME\",\"match\":[{\"host\":[\"$APP_DOMAINS\"]}],\"handle\":[{\"handler\":\"reverse_proxy\",\"upstreams\":[{\"@id\":\"upstream-$APP_NAME\",\"dial\":\":$APP_PORT\"}]}]}"
 fi
 
 echo "### Cleaning up unused containers and images..."
