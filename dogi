@@ -30,7 +30,7 @@ Usage over SSH:
 
 Options:
   -n  # The application name (required)
-  -d  # The domain under which the application will be made available (required if a port was provided)
+  -d  # The domains, separated by a space, which will be used to serve the application (required if a port was provided)
   -p  # The container port exposed by your application (required if a domain was provided)
   -o  # Additional options to pass to 'docker run' (defaults to '--net=host')
   -f  # Don't prompt for confirmation and use default directories
