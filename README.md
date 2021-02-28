@@ -1,4 +1,4 @@
-**Dogi** helps you deploy your pet projects using Docker, Git, Caddy and SSH.
+**Dogi** helps you deploy your pet projects using Docker, Git, Traefik and SSH.
 
 Get the code at <https://github.com/lipanski/dogi>.
 
@@ -7,8 +7,8 @@ Get the code at <https://github.com/lipanski/dogi>.
 - Keep things **simple**.
 - **Deploy** your application **with Git pushes** (Heroku-style).
 - Use **Docker** and **Dockerfiles** to define and contain your application dependencies.
-- Expose and manage a **web server** in the most simple way using **Caddy**.
-- **Manage SSL certificates automatically** with Caddy and Let's Encrypt.
+- Expose and manage a **web server** in the most simple way using **Traefik**.
+- **Manage SSL certificates automatically** with Traefik and Let's Encrypt.
 - **Recover from outages** or server restarts without any manual intervention.
 - Pass commands through **SSH** to manage your applications.
 - Handle all this with a simple, POSIX-compliant and **easy to review Shell script**.
@@ -18,18 +18,18 @@ Get the code at <https://github.com/lipanski/dogi>.
 - Handling more than one server at a time.
 - Handling complex use cases.
 - Anything anywhere close to Kubernetes, Docker Swarm, build packs or Helm charts.
-- Using Docker to establish network isolation (see the [Security](#Security) section below).
+- Using Docker to establish network isolation (all containers are part of the same internal network).
 
 ## Quick start
 
-Let's say you've built a web app to showcase your awesome coin collection. It runs on port 3001 and you've added a Dockerfile. You'd like to see it running at `https://coins.example.com`.
+Let's say you've built a web app to showcase your awesome coin collection. You've added a Dockerfile which exposes a port via `EXPOSE`. You'd like to see it running at `https://coins.example.com`.
 
 The following instructions assume that you've [installed Dogi](#Installation), you can connect to your server by calling `ssh dogi@1.2.3.4` and you've pointed your domain's DNS records to this machine.
 
 Let's **create** the app:
 
 ```sh
-ssh -t dogi@1.2.3.4 dogi create -n coins -d coins.example.com -p 3001
+ssh -t dogi@1.2.3.4 dogi create -n coins -d coins.example.com
 ```
 
 > Some Dogi commands are interactive so we need to call `ssh` with the `-t` (request TTY) option.
@@ -74,14 +74,14 @@ ssh -t dogi@1.2.3.4 dogi remove -n coins
 
 ## Installation
 
-Dogi is basically just a POSIX-compliant Shell script with Docker and curl as dependencies. It has been tested on Ubuntu 18.04 but it should run fine on any recent Ubuntu or Debian version.
+Dogi is basically just a POSIX-compliant Shell script with Docker and git as dependencies. It has been tested on Ubuntu 18.04 but it should run fine on any recent Ubuntu or Debian version.
 
 Here's how to set it up on Ubuntu:
 
-1. Install curl:
+1. Install git:
 
     ```sh
-    sudo apt-get install curl
+    sudo apt-get install git
     ```
 
 2. Install Docker. Please refer to [the official installation guide](https://docs.docker.com/engine/install/ubuntu/) or try your luck with:
@@ -144,10 +144,6 @@ Here's how to set it up on Ubuntu:
 ## Usage
 
 Run `dogi help` for a list of all available commands and options.
-
-## Security
-
-Dogi runs containers with `docker run --net=host`. This means all ports exposed by your containers will be available to all other containers and the host. If your apps bind to `0.0.0.0`, these ports will be exposed to the public as well. To prevent this, use a firewall - like `ufw` on Ubuntu or something like [AWS Security Groups](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html) or [DigitalOcean Cloud Firewalls](https://www.digitalocean.com/docs/networking/firewalls/).
 
 ## Development
 

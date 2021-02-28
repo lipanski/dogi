@@ -5,7 +5,7 @@ VERSION="0.3.0"
 HELP="
 dogi
 
-A simple way to deploy your pet projects using Docker, Git, Caddy and SSH.
+A simple way to deploy your pet projects using Docker, Git, Traefik and SSH.
 
 dogi create  # Create a new application
 dogi deploy  # Deploy an application
@@ -23,15 +23,14 @@ dogi create
 Creates a new application.
 
 Usage:
-  dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
+  dogi create -n [APP NAME] -d [APP DOMAIN]
 
 Usage over SSH:
-  ssh -t user@server dogi create -n [APP NAME] -d [APP DOMAIN] -p [APP PORT]
+  ssh -t user@server dogi create -n [APP NAME] -d [APP DOMAIN]
 
 Options:
   -n  # The application name (required)
-  -d  # The domains, separated by a space, which will be used to serve the application (required if a port was provided)
-  -p  # The container port exposed by your application (required if a domain was provided)
+  -d  # The domains, separated by a space, which will be used to serve the application
   -o  # Additional options to pass to 'docker run' (defaults to '--net=host')
   -f  # Don't prompt for confirmation and use default directories
   -h  # Show this message
@@ -109,7 +108,6 @@ set -eu
 APPS_DIR="%s"
 APP_NAME="%s"
 APP_DOMAIN="%s"
-APP_PORT="%s"
 DOCKER_OPTS="%s"
 
 echo "### Checking out the code..."
@@ -126,16 +124,11 @@ echo "### Starting the application..."
 docker run --name $APP_NAME \
   -d --restart unless-stopped \
   --env-file $APPS_DIR/$APP_NAME/env \
+  --network web \
+  -l "traefik.backend=$APP_NAME" \
+  -l "traefik.frontend.rule=Host:$APP_DOMAIN" \
   $DOCKER_OPTS \
   $APP_NAME
-
-if [ -n "$APP_DOMAIN" ] && [ -n "$APP_PORT" ]; then
-  APP_DOMAINS=$(echo $APP_DOMAIN | sed "s/\s/\",\"/")
-  echo "### Registering the application on Caddy as \"$APP_DOMAINS\"..."
-  curl -fs -XPATCH "http://localhost:2019/id/route-$APP_NAME/" \
-    -H "content-type: application/json" \
-    -d "{\"@id\":\"route-$APP_NAME\",\"match\":[{\"host\":[\"$APP_DOMAINS\"]}],\"handle\":[{\"handler\":\"reverse_proxy\",\"upstreams\":[{\"@id\":\"upstream-$APP_NAME\",\"dial\":\":$APP_PORT\"}]}]}"
-fi
 
 echo "### Cleaning up unused containers and images..."
 docker container prune -f --filter "until=168h"
@@ -144,10 +137,35 @@ docker image prune -a -f --filter "until=168h"
 echo "### Your app $APP_NAME was deployed successfully."
 '
 
-CADDY_IMAGE="caddy/caddy:2.1.1-alpine"
-DEFAULT_CADDY_DIR="$HOME/.caddy"
+TRAEFIK_CONFIG='
+defaultEntryPoints = ["http", "https"]
+
+[entryPoints]
+  [entryPoints.http]
+    address = ":80"
+    [entryPoints.http.redirect]
+      entryPoint = "https"
+  [entryPoints.https]
+    address = ":443"
+      [entryPoints.https.tls]
+
+[acme]
+email = "%s"
+storage = "acme.json"
+entryPoint = "https"
+onHostRule = true
+  [acme.httpChallenge]
+  entryPoint = "http"
+
+[docker]
+watch = true
+network = "web"
+'
+
+TRAEFIK_IMAGE="traefik:1.7.28-alpine"
+DEFAULT_TRAEFIK_DIR="$HOME/.traefik"
 APPS_DIR="$HOME/apps"
-DOCKER_OPTS="--net=host"
+DOCKER_OPTS=""
 FORCE=false
 
 setup(){
@@ -156,8 +174,8 @@ setup(){
     exit 1
   fi
 
-  if ! command -v curl > /dev/null; then
-    echo "### You need to install curl on the host machine before proceeding."
+  if ! command -v git > /dev/null; then
+    echo "### You need to install git on the host machine before proceeding."
     exit 1
   fi
 
@@ -166,57 +184,57 @@ setup(){
     exit 1
   fi
 
-  if test -z "$(docker ps -qf name=caddy)"; then
-    echo "### Starting Caddy..."
-
-    [ "$FORCE" = true ] || printf "### Where should Caddy store data and configuration? ($DEFAULT_CADDY_DIR) "; read -r CADDY_DIR
-    [ -z "$CADDY_DIR" ] && CADDY_DIR=$DEFAULT_CADDY_DIR
-    mkdir -p "$CADDY_DIR/data" "$CADDY_DIR/config"
-
-    docker run --name caddy \
-      -d --restart unless-stopped \
-      --net=host --cap-add=cap_net_bind_service \
-      -v "$CADDY_DIR/data:/data" -v "$CADDY_DIR/config:/config" \
-      $CADDY_IMAGE caddy run -resume
-
-    # Give caddy some time to resume before we apply the default configuration in the next step
-    sleep 10
+  if test -z "$(docker network ls -qf name=web)"; then
+    echo "### Setting up docker web network..."
+    docker network create -d bridge --subnet 192.168.0.0/24 --gateway 192.168.0.1 web
   fi
 
-  if test "$(curl -fs http://localhost:2019/config/)" = "null" || test "$(curl -fs http://localhost:2019/config/apps/http/servers/default/)" = "null"; then
-    echo "### Setting up default Caddy configuration..."
-    curl -fs http://localhost:2019/config/ \
-      -H "content-type: application/json" \
-      -d '{"apps":{"http":{"servers":{"default":{"listen":[":80",":443"],"routes":[]}}}}}'
+  if test -z "$(docker ps -qf name=traefik)"; then
+    echo "### Starting traefik..."
+
+    [ "$FORCE" = true ] || printf "### Where should Traefik store data and configuration? ($DEFAULT_TRAEFIK_DIR) "; read -r TRAEFIK_DIR
+    [ -z "$TRAEFIK_DIR" ] && TRAEFIK_DIR=$DEFAULT_TRAEFIK_DIR
+    mkdir -p "$TRAEFIK_DIR"
+    touch "$TRAEFIK_DIR/acme.json"
+    chmod 600 "$TRAEFIK_DIR/acme.json"
+
+    [ "$FORCE" = true ] || printf "### Which email should be associated with Let's Encrypt SSL certificates? "; read -r EMAIL
+    [ -z "$EMAIL" ] && EMAIL=""
+    printf "$TRAEFIK_CONFIG" "$EMAIL" > "$TRAEFIK_DIR/traefik.toml"
+
+    docker run --name traefik \
+      -d --restart unless-stopped \
+      --network web --cap-add=cap_net_bind_service \
+      -p 80:80 \
+      -p 443:443 \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v "$TRAEFIK_DIR/traefik.toml:/traefik.toml" \
+      -v "$TRAEFIK_DIR/acme.json:/acme.json" \
+      $TRAEFIK_IMAGE
+
+    # Give traefik some time to resume before we apply the default configuration in the next step
+    sleep 10
   fi
 }
 
 create(){
   [ "$HELP_REQUESTED" = true ] || [ -z "$APP_NAME" ] && { echo "$HELP_CREATE"; exit 1; }
-  [ -z "$APP_DOMAIN" ] && [ -n "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
-  [ -n "$APP_DOMAIN" ] && [ -z "$APP_PORT" ] && { echo "$HELP_CREATE"; exit 1; }
+  [ -z "$APP_DOMAIN" ] && { echo "$HELP_CREATE"; exit 1; }
 
   setup
 
-  echo "### Creating application '$APP_NAME' with domain '$APP_DOMAIN' running on port '$APP_PORT'"
+  echo "### Creating application '$APP_NAME' with domain '$APP_DOMAIN'"
   [ "$FORCE" = true ] || { printf "### Are you sure? (y/n) "; read -r CONFIRM; [ "$CONFIRM" != "y" ] && exit 1; }
 
   echo "### Setting up directories and files..."
   mkdir -p "$APPS_DIR/$APP_NAME/git" "$APPS_DIR/$APP_NAME/app"
   [ ! -f "$APPS_DIR/$APP_NAME/env" ] && echo "# Place your environment variables here" > "$APPS_DIR/$APP_NAME/env"
-  printf "$DEPLOY_SCRIPT" "$APPS_DIR" "$APP_NAME" "$APP_DOMAIN" "$APP_PORT" "$DOCKER_OPTS" > "$APPS_DIR/$APP_NAME/deploy"
+  printf "$DEPLOY_SCRIPT" "$APPS_DIR" "$APP_NAME" "$APP_DOMAIN" "$DOCKER_OPTS" > "$APPS_DIR/$APP_NAME/deploy"
   chmod +x "$APPS_DIR/$APP_NAME/deploy"
 
   echo "### Setting up git repository..."
   [ ! -f "$APPS_DIR/$APP_NAME/git/HEAD" ] && git init --bare "$APPS_DIR/$APP_NAME/git" > /dev/null
   ln -sf "$APPS_DIR/$APP_NAME/deploy" "$APPS_DIR/$APP_NAME/git/hooks/post-update"
-
-  if test -z "$(curl -fs "http://localhost:2019/id/route-$APP_NAME")"; then
-    echo "### Configuring Caddy..."
-    curl -fs http://localhost:2019/config/apps/http/servers/default/routes/ \
-      -H "content-type: application/json" \
-      -d "{\"@id\":\"route-$APP_NAME\"}"
-  fi
 
   echo "### Application created successfully."
 
@@ -253,9 +271,6 @@ remove(){
   echo "### Stopping the previously running instance..."
   docker stop "$APP_NAME" 2>&1 | xargs docker rm > /dev/null 2>&1 || echo "### Nothing to stop: no previous instance was running"
 
-  echo "### Unregistering the application on Caddy..."
-  curl -fs -XDELETE "http://localhost:2019/id/route-$APP_NAME/"
-
   echo "### Removing directories and files..."
   rm -rf "${APPS_DIR:?}/${APP_NAME:?}"
 }
@@ -271,10 +286,6 @@ do
       ;;
     d)
       APP_DOMAIN=$OPTARG
-      ;;
-    p)
-      APP_PORT=$OPTARG
-      echo "$APP_PORT" | grep -vqE "^[0-9]+$" && { echo "### The port argument may only contain numbers"; exit 1; }
       ;;
     o)
       DOCKER_OPTS=$OPTARG
