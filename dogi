@@ -282,7 +282,7 @@ do
   case $OPTION in
     n)
       APP_NAME=$OPTARG
-      echo "$APP_NAME" | grep -vqE "^[a-zA-Z0-9_]+$" && { echo "### The name argument may only contain letters, numbers or underscore"; exit 1; }
+      echo "$APP_NAME" | grep -vqE "^[a-zA-Z0-9_-]+$" && { echo "### The name argument may only contain letters, numbers or underscore"; exit 1; }
       ;;
     d)
       APP_DOMAIN=$OPTARG
