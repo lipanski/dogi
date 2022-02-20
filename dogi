@@ -162,7 +162,7 @@ watch = true
 network = "web"
 '
 
-TRAEFIK_IMAGE="traefik:1.7.28-alpine"
+TRAEFIK_IMAGE="traefik:1.7.34-alpine"
 DEFAULT_TRAEFIK_DIR="$HOME/.traefik"
 APPS_DIR="$HOME/apps"
 DOCKER_OPTS=""
