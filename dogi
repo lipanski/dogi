@@ -112,7 +112,7 @@ DOCKER_OPTS="%s"
 
 echo "### Checking out the code..."
 cd $APPS_DIR/$APP_NAME/git
-GIT_WORK_TREE=$APPS_DIR/$APP_NAME/app git checkout -f
+GIT_WORK_TREE=$APPS_DIR/$APP_NAME/app git checkout --recurse-submodules -f
 
 echo "### Building the image..."
 docker build -t $APP_NAME $APPS_DIR/$APP_NAME/app
